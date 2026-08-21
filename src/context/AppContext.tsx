@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
+  UserRole,
   ViewMode, 
   Course, 
   Student, 
@@ -18,6 +19,8 @@ import {
 } from '../data/mockData';
 
 interface AppContextType {
+  userRole: UserRole;
+  setUserRole: (role: UserRole) => void;
   currentView: ViewMode;
   setCurrentView: (view: ViewMode) => void;
   courses: Course[];
@@ -37,8 +40,10 @@ interface AppContextType {
   // Student simulation controls
   currentStudent: Student;
   setCurrentStudent: (student: Student) => void;
-  simulatedDistance: number; // in meters (e.g. 15m)
+  simulatedDistance: number; // in meters (e.g. 14.5m)
   setSimulatedDistance: (dist: number) => void;
+  isSimulatorOpen: boolean;
+  setIsSimulatorOpen: (open: boolean) => void;
   
   // Actions
   markStudentAttendance: (courseId?: string, overrideDistance?: number) => { success: boolean; message: string; record?: AttendanceRecord };
@@ -52,12 +57,19 @@ interface AppContextType {
   addNotification: (item: Omit<NotificationItem, 'id' | 'read' | 'time'>) => void;
   isProjectorMode: boolean;
   setIsProjectorMode: (val: boolean) => void;
+  
+  // Auth & Role Switcher Modal
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  targetRoleForAuth: UserRole | null;
+  requestRoleSwitch: (role: UserRole) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<ViewMode>('student-view'); // start in student-view to match prompt screenshot initially
+  const [userRole, setUserRole] = useState<UserRole>('student'); // starts in student mode
+  const [currentView, setCurrentView] = useState<ViewMode>('student-scan');
   const [courses] = useState<Course[]>(INITIAL_COURSES);
   const [students] = useState<Student[]>(INITIAL_STUDENTS);
   const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_ATTENDANCE_RECORDS);
@@ -65,14 +77,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   
-  const [currentStudent, setCurrentStudent] = useState<Student>(INITIAL_STUDENTS[0]);
-  const [simulatedDistance, setSimulatedDistance] = useState<number>(14.5); // Default 14.5m (well inside 100m)
+  const [currentStudent, setCurrentStudent] = useState<Student>(INITIAL_STUDENTS[0]); // Alex Rivera
+  const [simulatedDistance, setSimulatedDistance] = useState<number>(14.5); // Default 14.5m inside geofence
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState<boolean>(false);
   
   const [qrToken, setQrToken] = useState<string>('QR-ATT-CS401-9921-TOKEN-X74');
   const [qrSecondsLeft, setQrSecondsLeft] = useState<number>(settings.qrRotationInterval);
   const [qrCountdown, setQrCountdown] = useState<number>(100);
   const [isQrPaused, setIsQrPaused] = useState<boolean>(false);
   const [isProjectorMode, setIsProjectorMode] = useState<boolean>(false);
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [targetRoleForAuth, setTargetRoleForAuth] = useState<UserRole | null>(null);
 
   // Generate dynamic cryptographic QR token
   const generateNewQrToken = useCallback((courseCode: string = 'CS401') => {
@@ -109,6 +125,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleQrPause = () => {
     setIsQrPaused(prev => !prev);
+  };
+
+  const requestRoleSwitch = (role: UserRole) => {
+    if (role === userRole) return;
+    if (role === 'professor') {
+      // Require faculty verification modal
+      setTargetRoleForAuth('professor');
+      setIsAuthModalOpen(true);
+    } else {
+      // Switch to student seamlessly
+      setUserRole('student');
+      setCurrentView('student-scan');
+    }
   };
 
   const markStudentAttendance = (courseId?: string, overrideDistance?: number) => {
@@ -267,6 +296,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        userRole,
+        setUserRole,
         currentView,
         setCurrentView,
         courses,
@@ -284,6 +315,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentStudent,
         simulatedDistance,
         setSimulatedDistance,
+        isSimulatorOpen,
+        setIsSimulatorOpen,
         markStudentAttendance,
         updateRecordStatus,
         startNewSession,
@@ -294,7 +327,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markNotificationsAsRead,
         addNotification,
         isProjectorMode,
-        setIsProjectorMode
+        setIsProjectorMode,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        targetRoleForAuth,
+        requestRoleSwitch
       }}
     >
       {children}

@@ -1,8 +1,15 @@
+export type UserRole = 'student' | 'professor';
+
 export type ViewMode = 
+  // Student Views
+  | 'student-scan'
+  | 'student-history'
+  | 'student-courses'
+  | 'student-profile'
+  // Professor Views
   | 'professor-dashboard'
   | 'active-sessions'
   | 'attendance-reports'
-  | 'student-view'
   | 'settings';
 
 export interface Student {
