@@ -1,0 +1,6 @@
+{
+  "name": "QRAttend - Smart Academic Attendance System",
+  "description": "Geofenced rotating QR attendance system for academic institutions with live session dashboards, student verification, anti-proxy fraud detection, and comprehensive attendance reporting.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
